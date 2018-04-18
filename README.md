@@ -1,1 +1,0 @@
-Initial commit for landmark_recognition repository
