@@ -10,6 +10,7 @@ from keras.layers.normalization import BatchNormalization
 import argparse
 from os.path import join
 from scipy import misc
+import numpy as np
 
 # TODO: think of sensible architecture for each pretrained network
 
@@ -22,7 +23,7 @@ def modified_pretrained_model(classes, pretrained_weights="DenseNet121", freeze_
             for layer in pretrained_conv_model.layers:
                 layer.trainable = False
 
-        input = Input(shape=(200, 200, 3),name = 'image_input')
+        input = Input(shape=(None, None, 3),name = 'image_input')
         output_pretrained_conv = pretrained_conv_model(input)
 
         eps = 1.1e-5
@@ -40,7 +41,7 @@ def modified_pretrained_model(classes, pretrained_weights="DenseNet121", freeze_
             for layer in pretrained_conv_model.layers:
                 layer.trainable = False
 
-        input = Input(shape=(200, 200, 3),name = 'image_input')
+        input = Input(shape=(None, None, 3),name = 'image_input')
         output_pretrained_conv = pretrained_conv_model(input)
 
         x = GlobalAveragePooling2D()(output_pretrained_conv)
@@ -171,7 +172,8 @@ def main():
     
     else:
         photo = misc.imread(args.predict)
-        prediction = model.predict(photo)
+        model.summary()
+        prediction = model.predict(photo[np.newaxis])
         print(f"Prediction for {args.predict} : {prediction}")
 
 if __name__ == "__main__":
