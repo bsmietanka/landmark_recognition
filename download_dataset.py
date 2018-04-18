@@ -4,6 +4,12 @@ import os
 import urllib.request
 from multiprocessing.dummy import Pool as ThreadPool
 
+# TODO: change dataset directory structure
+#   dataset/
+#     |--> train/
+#     |    |--> {classes}/
+#     |--> test/
+#          |--> {classes}/
 
 class ImageDownloader:
     def __init__(self, path):

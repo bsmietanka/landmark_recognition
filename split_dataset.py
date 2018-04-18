@@ -2,6 +2,10 @@ from os import listdir, rename
 from os.path import isdir, join
 import random
 
+# TODO: tidy up
+# TODO: merge with download_dataset.py
+# TODO: script works only if destination directories exist, must be fixed
+
 if __name__ == "__main__":
     path = "./dataset/"
     threshold = 20
