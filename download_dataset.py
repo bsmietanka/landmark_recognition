@@ -25,7 +25,7 @@ class ImageDownloader:
         self.total = 0
 
     def save_image(self, urlRow):
-        if self.count % 100 == 0:
+        if self.count % 100 == 0 and self.count != 0:
             print("Pobrano już " + str(self.count) + "/" + str(self.total)+" obrazków.")
         self.count = self.count+1
         makedirs(self.directory + '/' + urlRow[2], exist_ok=True)
@@ -39,11 +39,12 @@ class ImageDownloader:
         self.total = len(urlData)
         pool = ThreadPool(threadCount)
         pool.map(self.save_image, urlData)
+        pool.close()
 
 
 def main():
     parser = argparse.ArgumentParser(description='Download images specified in .csv file')
-    parser.add_argument('--inputFile', default='dataset/trainFiltered.csv', help='path to input csv data file')
+    parser.add_argument('--inputFile', default='csv/dataset_filtered.csv', help='path to input csv data file')
     parser.add_argument('--images', default="dataset", help='Where to save training images')
     parser.add_argument('--validation', default="validation", help='Where to save validation images')
     parser.add_argument('--split', default="20", help='Percentage of images to be used as validation data')

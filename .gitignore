@@ -1,5 +1,6 @@
 .venv/
 .vscode/
+.idea/
 dataset/
 validation/
 *.hdf5
