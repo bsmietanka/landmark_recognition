@@ -11,6 +11,7 @@ import argparse
 from os.path import join
 from scipy import misc
 import numpy as np
+from skimage import transform
 
 # TODO: think of sensible architecture for each pretrained network
 
@@ -59,8 +60,6 @@ def modified_pretrained_model(classes, pretrained_weights="DenseNet121", freeze_
 
     model.save(f"pretrained-weights-{pretrained_weights}.hdf5")
     return model
-
-# TODO: load saved model if exists
 
 def create_new_model(classes):
     model = Sequential()
@@ -172,6 +171,7 @@ def main():
     
     else:
         photo = misc.imread(args.predict)
+        photo = transform.resize(photo, (200,200))
         model.summary()
         prediction = model.predict(photo[np.newaxis])
         print(f"Prediction for {args.predict} : {prediction}")
