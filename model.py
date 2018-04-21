@@ -96,9 +96,8 @@ def create_new_model(classes):
 
     return model
 
-# TODO: tidy up main function
-# TODO: add argparse and cmdline parameters (eg. dataset path, model type etc.)
-# TODO: experiment with learning rate, batch size
+# TODO: experiment with batch size
+# TODO: add custom generator with variable image size for each batch
 
 def main():
     parser = argparse.ArgumentParser(description='Deep neural network model for landmark recognition')
@@ -143,6 +142,8 @@ def main():
                 class_mode='categorical')
 
         num_classes = len(train_generator.class_indices)
+        train_batches = len(train_generator)
+        test_batches = len(validation_generator)
 
     if args.load is not None:
         # TODO validate model
@@ -163,10 +164,10 @@ def main():
 
         model.fit_generator(
             train_generator,
-            steps_per_epoch=2000 // batch_size,
+            steps_per_epoch=train_batches,
             epochs=50,
             validation_data=validation_generator,
-            validation_steps=800 // batch_size,
+            validation_steps=test_batches,
             callbacks=callbacks_list)
     
     else:
@@ -176,5 +177,8 @@ def main():
         prediction = model.predict(photo[np.newaxis])
         print(f"Prediction for {args.predict} : {prediction}")
 
+# TODO: argparse in __main__,
+# rename main() to something more verbose,
+# add argparse arguments
 if __name__ == "__main__":
     main()
