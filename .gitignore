@@ -4,3 +4,4 @@
 dataset/
 validation/
 *.hdf5
+__pycache__
