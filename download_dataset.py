@@ -20,7 +20,7 @@ def split_dataset(data_path, validation_path, threshold):
 
 class ImageDownloader:
     def __init__(self, path):
-        self.directory = path
+        self.directory = join(path, "train")
         self.count = 0
         self.total = 0
 
@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--inputFile', default='csv/dataset_filtered.csv', help='path to input csv data file')
     parser.add_argument('--images', default="dataset", help='Where to save training images')
     parser.add_argument('--validation', default="validation", help='Where to save validation images')
-    parser.add_argument('--split', default="20", help='Percentage of images to be used as validation data')
+    parser.add_argument('--split', type="int", default="20", help='Percentage of images to be used as validation data')
     parser.add_argument('--threads', default="24", help='How many threads to use')
     args = parser.parse_args()
 
@@ -60,7 +60,7 @@ def main():
 
     imDownloader = ImageDownloader(args.images)
     imDownloader.save_images_multithreaded(urlData, int(args.threads))
-    split_dataset(args.images+'/', args.validation+'/', int(args.split))
+    split_dataset(imDownloader.directory, args.validation+'/', int(args.split))
 
     print("Pobrano zdjęcia")
 
