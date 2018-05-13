@@ -1,3 +1,6 @@
+from os.path import join
+from os import listdir, environ
+environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from keras.models import Sequential, Model, load_model
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import GlobalAveragePooling2D, MaxPooling2D, GlobalMaxPooling2D
@@ -8,8 +11,6 @@ from keras.applications import VGG16, DenseNet121
 from keras import optimizers
 from keras.layers.normalization import BatchNormalization
 import argparse
-from os.path import join
-from os import listdir
 from scipy import misc
 import numpy as np
 from skimage import transform
@@ -191,8 +192,10 @@ def main():
                 validation_steps=test_batches,
                 callbacks=callbacks_list)
         else:
-            model.evaluate_generator(validation_generator)
-        
+            score, acc = model.evaluate_generator(validation_generator, verbose=1)
+            print(f"Model test score: {score}")
+            print(f"Model test accuracy: {acc}")
+
     else:
         classes_dict = {}
         for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
