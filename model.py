@@ -1,5 +1,5 @@
-from os.path import join
-from os import listdir, environ
+from os.path import join, exists
+from os import listdir, environ, makedirs
 environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from keras.models import Sequential, Model, load_model
 from keras.layers.convolutional import Convolution2D
@@ -14,201 +14,187 @@ import argparse
 from scipy import misc
 import numpy as np
 from skimage import transform
+from matplotlib import pyplot as plt
+from datetime import datetime
 
 # TODO: think of sensible architecture for each pretrained network
 # TODO: add non-landmark class
 # TODO: expand dataset
-# TODO: compare three architectures (in cocumentation)
+# TODO: compare three architectures (in documentation)
 # TODO: more accurate training results (eg. accuracy in epochs)
-# TODO: working validation
 
-def modified_pretrained_model(classes, pretrained_weights="DenseNet121", freeze_top=False):
+class model:
 
-    if pretrained_weights == "DenseNet121":
-        pretrained_conv_model = DenseNet121(weights="imagenet", include_top=False)
-        
-        if freeze_top:
-            for layer in pretrained_conv_model.layers:
-                layer.trainable = False
+    types = {'VGG16', 'DenseNet121', 'VGG-based'}
 
-        input = Input(shape=(None, None, 3),name = 'image_input')
-        output_pretrained_conv = pretrained_conv_model(input)
+    '''
+    This function accepts both path to a dataset directory
+    and to a .csv file containing classes and urls to photos.
+    Function expects dataset directory to consist of two
+    subdirectories: 'train' and 'validation'
+    '''
+    def prepare_data_generators(self, path, only_test=False):
+        self.batch_size = 8
 
-        eps = 1.1e-5
-        final_stage = "final"
-        x = BatchNormalization(epsilon=eps, axis=3, name='conv'+str(final_stage)+'_blk_bn')(output_pretrained_conv)
-        x = Activation('relu', name='relu'+str(final_stage)+'_blk')(x)
-        x = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
-        x = Dense(classes, name='predictions')(x)
-        x = Activation('softmax', name='prob')(x)
-
-    elif pretrained_weights == "VGG16":
-        pretrained_conv_model = VGG16(weights='imagenet', include_top=False)
-
-        if freeze_top:
-            for layer in pretrained_conv_model.layers:
-                layer.trainable = False
-
-        input = Input(shape=(None, None, 3),name = 'image_input')
-        output_pretrained_conv = pretrained_conv_model(input)
-
-        eps = 1.1e-5
-        x = BatchNormalization(epsilon=eps, axis=3, name='batch_normalization')(output_pretrained_conv)
-        x = Activation('relu', name='relu_act')(x)
-        x = GlobalAveragePooling2D()(output_pretrained_conv)
-        x = Dense(512, activation='relu', name='fc1')(x)
-        x = Dense(256, activation='relu', name='fc2')(x)
-        x = Dense(classes, activation="softmax")(x)
-
-    model = Model(input=input, output=x)
-    model.summary()
-
-    sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd,
-            loss='categorical_crossentropy',
-            metrics=['accuracy'])
-
-    model.save(f"pretrained-weights-{pretrained_weights}.hdf5")
-    return model
-
-def create_new_model(classes):
-    model = Sequential()
-
-    eps = 1.1e-5
-
-    model.add(Convolution2D(64, (3,3), activation="relu", input_shape=(None, None, 3)))
-    model.add(Convolution2D(64, (3,3), activation="relu", padding="same"))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Convolution2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(128, (3, 3), activation='relu', padding='same'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(BatchNormalization(epsilon=eps, axis=3, name='batch_normalization'))
-    model.add(Activation('relu', name='relu_act'))
-    model.add(GlobalMaxPooling2D())
-    model.add(Dense(512, activation='relu'))
-    model.add(Dense(256, activation='relu'))
-    model.add(Dense(classes, activation='softmax'))
-
-    model.summary()
-
-    sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd,
-            loss='categorical_crossentropy',
-            metrics=['accuracy'])
-
-    return model
-
-# TODO: experiment with batch size
-# TODO: add custom generator with variable image size for each batch
-
-def main():
-    parser = argparse.ArgumentParser(description='Deep neural network model for landmark recognition')
-    parser.add_argument('dataset_path', metavar='dataset_path', nargs='?', default='', help='path to a dataset directory')
-    # parser.add_argument('-k', type=int, default=5, help='number of neighbours')
-    # read dataset from csv and download to local directiory?
-    parser.add_argument('-m', '--model',
-                        default="DenseNet121",
-                        choices=["DenseNet121", "VGG16", "custom"],
-                        help='indicates which model should be used')
-    parser.add_argument('-p', '--predict', help='path to photo to predict landmark')
-    parser.add_argument('-l', '--load', help='path to saved model weights')
-    parser.add_argument('-f', '--freeze', action='store_true', help='freeze top convolutional layers when using pretrained weights')
-    parser.add_argument('-v', '--validate', action='store_true', help='validation directory')
-    args = parser.parse_args()
-
-    if args.predict is not None and args.load is None:
-        print("Provide saved model path to predict landmark")
-        return
-
-    if args.predict is None:
-        # TODO calculate batch size based on available memory
-        batch_size = 8
-
-        if not args.validate:
+        if not only_test:
             train_datagen = ImageDataGenerator(
                     rescale=1./255,
                     shear_range=0.2,
                     zoom_range=0.2,
                     horizontal_flip=True)
 
-        test_datagen = ImageDataGenerator(rescale=1./255)
-
-        if not args.validate:
-            train_generator = train_datagen.flow_from_directory(
-                    join(args.dataset_path, "train"),
-                    target_size=(200, 200),
-                    batch_size=batch_size,
-                    class_mode='categorical')
-
-            train_batches = len(train_generator)
-
-        validation_generator = test_datagen.flow_from_directory(
-                join(args.dataset_path, 'validation'),
+            self.train_generator = train_datagen.flow_from_directory(
+                join(path, "train"),
                 target_size=(200, 200),
-                batch_size=batch_size,
+                batch_size=self.batch_size,
                 class_mode='categorical')
 
-        num_classes = len(validation_generator.class_indices)
-        test_batches = len(validation_generator)
-        classes_dict = {}
-        for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
-            classes_dict[i] = dir
+        test_datagen = ImageDataGenerator(rescale=1./255)
 
-    if args.load is not None:
-        # TODO validate model
-        model = load_model(args.load)
-    elif args.model == "custom":
-        model = create_new_model(num_classes)
-    else:
-        model = modified_pretrained_model(
-            num_classes,
-            pretrained_weights=args.model,
-            freeze_top=args.freeze)
+        self.validation_generator = test_datagen.flow_from_directory(
+                join(path, 'validation'),
+                target_size=(200, 200),
+                batch_size=self.batch_size,
+                class_mode='categorical')
 
-    if args.predict is None:
-        filepath="weights.best.hdf5"
-        checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+        self.num_classes = len(self.validation_generator.class_indices)
+
+        self.classes_dict = {}
+        for i, dir in enumerate(listdir(join(path, "train"))):
+            self.classes_dict[i] = dir
+
+    def instantiate_model(self, model_type, freeze_conv=False):
+
+        self.type = model_type
+        eps = 1.1e-5
+
+        if self.type == 'DenseNet121':
+            pretrained_conv_model = DenseNet121(weights="imagenet", include_top=False)
+        
+            if freeze_conv:
+                for layer in pretrained_conv_model.layers:
+                    layer.trainable = False
+
+            input = Input(shape=(None, None, 3),name = 'image_input')
+            output_pretrained_conv = pretrained_conv_model(input)
+
+            final_stage = "final"
+            x = BatchNormalization(epsilon=eps, axis=3, name='conv'+str(final_stage)+'_blk_bn')(output_pretrained_conv)
+            x = Activation('relu', name='relu'+str(final_stage)+'_blk')(x)
+            x = GlobalAveragePooling2D(name='pool'+str(final_stage))(x)
+            x = Dense(self.num_classes, name='predictions')(x)
+            x = Activation('softmax', name='prob')(x)
+
+            self.model = Model(input=input, output=x)
+
+        elif self.type == 'VGG16':
+            pretrained_conv_model = VGG16(weights='imagenet', include_top=False)
+
+            if freeze_conv:
+                for layer in pretrained_conv_model.layers:
+                    layer.trainable = False
+
+            input = Input(shape=(None, None, 3),name = 'image_input')
+            output_pretrained_conv = pretrained_conv_model(input)
+
+            x = BatchNormalization(epsilon=eps, axis=3, name='batch_normalization')(output_pretrained_conv)
+            x = Activation('relu', name='relu_act')(x)
+            x = GlobalAveragePooling2D()(output_pretrained_conv)
+            x = Dense(512, activation='relu', name='fc1')(x)
+            x = Dense(256, activation='relu', name='fc2')(x)
+            x = Dense(self.num_classes, activation="softmax")(x)
+
+            self.model = Model(input=input, output=x)
+
+        elif self.type == 'VGG-based':
+            self.model = Sequential()
+
+            self.model.add(Convolution2D(64, (3,3), activation="relu", input_shape=(None, None, 3)))
+            self.model.add(Convolution2D(64, (3,3), activation="relu", padding="same"))
+            self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+            self.model.add(Convolution2D(128, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(128, (3, 3), activation='relu', padding='same'))
+            self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+            self.model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(256, (3, 3), activation='relu', padding='same'))
+            self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(Convolution2D(512, (3, 3), activation='relu', padding='same'))
+            self.model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+            self.model.add(BatchNormalization(epsilon=eps, axis=3, name='batch_normalization'))
+            self.model.add(Activation('relu', name='relu_act'))
+            self.model.add(GlobalMaxPooling2D())
+            self.model.add(Dense(512, activation='relu'))
+            self.model.add(Dense(256, activation='relu'))
+            self.model.add(Dense(self.num_classes, activation='softmax'))
+        
+        self.model.summary()
+        sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+        self.model.compile(optimizer=sgd,
+            loss='categorical_crossentropy',
+            metrics=['accuracy'])
+
+    # TODO: validate loaded model?
+    # TODO: load classes dict?
+    def load_model(self, path):
+        self.model = load_model(path)
+        self.model.summary()
+
+    def validate(self):
+        return self.model.evaluate_generator(self.validation_generator)
+
+    def train(self):
+        output_dir = join("results", "{}_{}_{:%Y.%m.%d__%H-%M}".format(self.type, self.num_classes, datetime.now()))
+        if not exists(output_dir):
+            makedirs(output_dir)
+
+        checkpoint = ModelCheckpoint(join(output_dir, 'weights.hdf5'), monitor='val_acc', verbose=1, save_best_only=True, mode='max')
         stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=2, verbose=0, mode='auto')
         callbacks_list = [checkpoint, stopping]
 
-        if not args.validate:
-            model.fit_generator(
-                train_generator,
-                steps_per_epoch=train_batches,
-                epochs=50,
-                validation_data=validation_generator,
-                validation_steps=test_batches,
-                callbacks=callbacks_list)
-        else:
-            score, acc = model.evaluate_generator(validation_generator, verbose=1)
-            print(f"Model test score: {score}")
-            print(f"Model test accuracy: {acc}")
+        history = self.model.fit_generator(
+            self.train_generator,
+            steps_per_epoch=len(self.train_generator),
+            epochs=50,
+            validation_data=self.validation_generator,
+            validation_steps=len(self.validation_generator),
+            callbacks=callbacks_list)
 
-    else:
-        classes_dict = {}
-        for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
-            classes_dict[i] = dir
-        photo = misc.imread(args.predict)
+        # summarize history for accuracy
+        plt.plot(history.history['acc'])
+        plt.plot(history.history['val_acc'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        # plt.show()
+        plt.savefig(join(output_dir, 'train_history_accuracy.pdf'))
+        plt.savefig(join(output_dir, 'train_history_accuracy.png'))
+        # summarize history for loss
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        # plt.show()
+        plt.savefig(join(output_dir, 'train_history_loss.pdf'))
+        plt.savefig(join(output_dir, 'train_history_loss.png'))
+
+    # TODO: path to directory and single image?
+    def predict(self, path):
+        # classes_dict = {}
+        # for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
+        #     classes_dict[i] = dir
+        photo = misc.imread(path)
         photo = transform.resize(photo, (200,200))
-        model.summary()
-        prediction = model.predict(photo[np.newaxis])
-        print(f"Prediction for {args.predict} : {prediction}")
-        print(f"Class: {classes_dict[np.argmax(prediction)]}")
-
-# TODO: argparse in __main__,
-# rename main() to something more verbose,
-# add argparse arguments
-if __name__ == "__main__":
-    main()
+        prediction = self.model.predict(photo[np.newaxis])
+        classes = prediction.argmax(axis=-1)
+        print(f"Prediction for {path} :\n{classes}")
+        # print(f"Class: {classes_dict[np.argmax(prediction)]}")
