@@ -155,7 +155,7 @@ class model:
             makedirs(output_dir)
 
         checkpoint = ModelCheckpoint(join(output_dir, 'weights.hdf5'), monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=2, verbose=0, mode='auto')
+        stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=1, verbose=0, mode='auto')
         callbacks_list = [checkpoint, stopping]
 
         history = self.model.fit_generator(
