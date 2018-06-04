@@ -143,6 +143,7 @@ class model:
     # TODO: validate loaded model?
     # TODO: load classes dict?
     def load_model(self, path):
+        self.type = "loaded"
         self.model = load_model(path)
         self.model.summary()
 
@@ -176,6 +177,7 @@ class model:
         # plt.show()
         plt.savefig(join(output_dir, 'train_history_accuracy.pdf'))
         plt.savefig(join(output_dir, 'train_history_accuracy.png'))
+        plt.close()
         # summarize history for loss
         plt.plot(history.history['loss'])
         plt.plot(history.history['val_loss'])
@@ -186,6 +188,7 @@ class model:
         # plt.show()
         plt.savefig(join(output_dir, 'train_history_loss.pdf'))
         plt.savefig(join(output_dir, 'train_history_loss.png'))
+        plt.close()
 
     # TODO: path to directory and single image?
     def predict(self, path):

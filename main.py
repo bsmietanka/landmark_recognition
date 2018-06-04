@@ -24,6 +24,7 @@ def main():
         return
 
     if args.load is not None:
+        my_model.prepare_data_generators(args.dataset_path, args.validate)
         my_model.load_model(args.load)
     elif args.dataset_path is not None:
         my_model.prepare_data_generators(args.dataset_path, args.validate)

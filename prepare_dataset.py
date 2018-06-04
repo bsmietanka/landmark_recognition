@@ -4,7 +4,7 @@ import os
 import urllib.request
 import datetime
 from multiprocessing.dummy import Pool as ThreadPool
-from remove_lowres_upd_csv import check_file
+from remove_lowres_upd_csv import check_images
 from PIL import Image
 from operator import is_not
 from functools import partial
@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--outputFile', default='trainFiltered.csv', help='path to output data file')
     parser.add_argument('--imNum', default='10000', help='max number of pictures of all sizes in selected classes')
     parser.add_argument('--classes', default='100', help='number of selected classes')
-    parser.add_argument('--images', default="dataset", help='Where to save the new .csv file')
+    parser.add_argument('--images', default="csv", help='Where to save the new .csv file')
     args = parser.parse_args()
 
     print("Rozpoczęto działanie skryptu")

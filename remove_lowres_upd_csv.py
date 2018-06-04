@@ -38,7 +38,7 @@ def main():
     parser.add_argument('--minY', default='600', help='min value of shorter dimension in px')
     parser.add_argument('--maxY', default='1200', help='max value of shorter dimension in px')
     parser.add_argument('--outputFile', default='trainFiltered2.csv', help='path to output data file')
-    parser.add_argument('--images', default="dataset", help='Folder where images are stored')
+    parser.add_argument('--images', default="csv", help='Folder where images are stored')
     args = parser.parse_args()
 
     print("Rozpoczęto działanie skryptu")
