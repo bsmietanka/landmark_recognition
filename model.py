@@ -17,12 +17,6 @@ from skimage import transform
 from matplotlib import pyplot as plt
 from datetime import datetime
 
-# TODO: think of sensible architecture for each pretrained network
-# TODO: add non-landmark class
-# TODO: expand dataset
-# TODO: compare three architectures (in documentation)
-# TODO: more accurate training results (eg. accuracy in epochs)
-
 class model:
 
     types = {'VGG16', 'DenseNet121', 'VGG-based'}
