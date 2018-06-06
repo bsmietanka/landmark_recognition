@@ -39,15 +39,16 @@ def main():
     if args.validate:
         print(my_model.validate())
     elif args.predict:
-        predictions = my_model.predict()
-        predicted_classes = np.argmax(predictions, axis=1)
-        test_data_generator = my_model.validation_generator 
+        test_data_generator = my_model.validation_generator
         true_classes = test_data_generator.classes
         class_labels = list(test_data_generator.class_indices.keys())
+        predictions = my_model.predict()
+        predicted_classes = np.argmax(predictions, axis=1)
         report = metrics.classification_report(true_classes, predicted_classes, target_names=class_labels)
         print(report)
     else:
         my_model.train()
+
 
 if __name__ == "__main__":
     main()

@@ -49,6 +49,7 @@ class model:
                 join(path, 'validation'),
                 target_size=(200, 200),
                 batch_size=self.batch_size,
+                shuffle=False,
                 class_mode='categorical')
 
         self.num_classes = len(self.validation_generator.class_indices)
@@ -200,4 +201,4 @@ class model:
 
     def predict(self):
         test_steps_per_epoch = np.math.ceil(self.validation_generator.samples / self.validation_generator.batch_size)
-        return self.model.predict_generator(self.validation_generator, steps=test_steps_per_epoch)
+        return self.model.predict_generator(self.validation_generator, steps=test_steps_per_epoch, workers=4)
