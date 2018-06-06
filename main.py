@@ -2,16 +2,19 @@
 
 import argparse
 from model import model
+import numpy as np
+from sklearn import metrics
+
 
 def main():
     parser = argparse.ArgumentParser(description='Deep neural network model for landmark recognition')
-    parser.add_argument('dataset_path', metavar='dataset_path', nargs='?', default='', help='path to a dataset directory')
+    parser.add_argument('dataset_path', metavar='dataset_path', help='path to a dataset directory')
     # read dataset from csv and download to local directiory?
     parser.add_argument('-m', '--model',
                         default="DenseNet121",
                         choices=model.types,
                         help='indicates which model should be used')
-    parser.add_argument('-p', '--predict', help='path to photo to predict landmark')
+    parser.add_argument('-p', '--predict', action='store_true', help='path to photo to predict landmark')
     parser.add_argument('-l', '--load', help='path to saved model weights')
     parser.add_argument('-f', '--freeze', action='store_true', help='freeze top convolutional layers when using pretrained weights')
     parser.add_argument('-v', '--validate', action='store_true', help='validation directory')
@@ -19,24 +22,30 @@ def main():
 
     my_model = model()
 
-    if args.predict is not None and args.load is None:
+    if args.predict and args.load is None:
         print("Provide saved model path to predict landmark")
         return
 
+    my_model.prepare_data_generators(args.dataset_path, args.validate or args.predict)
     if args.load is not None:
-        my_model.prepare_data_generators(args.dataset_path, args.validate)
         my_model.load_model(args.load)
     elif args.dataset_path is not None:
-        my_model.prepare_data_generators(args.dataset_path, args.validate)
         my_model.instantiate_model(args.model, args.freeze)
     else:
         print("Provide path to dataset to train or validate instantiated model")
+        print("For more information on usage type --help")
         return
     
     if args.validate:
-        my_model.validate()
-    elif args.predict is not None:
-        my_model.predict(args.predict)
+        print(my_model.validate())
+    elif args.predict:
+        predictions = my_model.predict()
+        predicted_classes = np.argmax(predictions, axis=1)
+        test_data_generator = my_model.validation_generator 
+        true_classes = test_data_generator.classes
+        class_labels = list(test_data_generator.class_indices.keys())
+        report = metrics.classification_report(true_classes, predicted_classes, target_names=class_labels)
+        print(report)
     else:
         my_model.train()
 

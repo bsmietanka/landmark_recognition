@@ -12,10 +12,10 @@ def split_dataset(data_path, validation_path, threshold):
 
     makedirs(validation_path, exist_ok=True)
     for cls_dir in classes:
-        for photo in listdir(data_path + cls_dir):
+        for photo in listdir(join(data_path, cls_dir)):
             if random.uniform(0, 100) < threshold:
-                makedirs(validation_path + '/' + cls_dir, exist_ok=True)
-                rename(data_path + cls_dir + '/' + photo, validation_path + cls_dir + '/' + photo)
+                makedirs(join(validation_path, cls_dir), exist_ok=True)
+                rename(join(data_path, cls_dir, photo), join(validation_path, cls_dir, photo))
 
 
 class ImageDownloader:
@@ -44,23 +44,23 @@ class ImageDownloader:
 
 def main():
     parser = argparse.ArgumentParser(description='Download images specified in .csv file')
-    parser.add_argument('--inputFile', default='csv/dataset_filtered.csv', help='path to input csv data file')
-    parser.add_argument('--images', default="dataset", help='Where to save training images')
-    parser.add_argument('--validation', default="validation", help='Where to save validation images')
-    parser.add_argument('--split', type="int", default="20", help='Percentage of images to be used as validation data')
-    parser.add_argument('--threads', default="24", help='How many threads to use')
+    parser.add_argument('-s', '--source', help='path to input csv data file')
+    parser.add_argument('-d', '--destination', default="dataset", help='Where to save training images')
+    parser.add_argument('-v', '--validation', default="validation", help='Where to save validation images')
+    parser.add_argument('--split', type=int, default="20", help='Percentage of images to be used as validation data')
+    parser.add_argument('-j', '--threads', type=int, default="24", help='How many threads to use')
     args = parser.parse_args()
 
     print("Rozpoczęto działanie skryptu")
     urlData = list()
-    with open(args.inputFile, 'r') as csvfile:
+    with open(args.source, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
         for i, row in enumerate(reader):
             urlData.append(row)
 
-    imDownloader = ImageDownloader(args.images)
+    imDownloader = ImageDownloader(args.destination)
     imDownloader.save_images_multithreaded(urlData, int(args.threads))
-    split_dataset(imDownloader.directory, args.validation+'/', int(args.split))
+    split_dataset(imDownloader.directory, join(args.destination, args.validation), int(args.split))
 
     print("Pobrano zdjęcia")
 

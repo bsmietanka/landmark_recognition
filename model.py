@@ -8,7 +8,7 @@ from keras.layers import Dense, Input, Flatten, Activation
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.applications import VGG16, DenseNet121
-from keras import optimizers
+from keras import optimizers, metrics
 from keras.layers.normalization import BatchNormalization
 import argparse
 from scipy import misc
@@ -164,6 +164,7 @@ class model:
         # summarize history for accuracy
         plt.plot(history.history['acc'])
         plt.plot(history.history['val_acc'])
+        plt.ylim([0, 1])
         plt.title('model accuracy')
         plt.ylabel('accuracy')
         plt.xlabel('epoch')
@@ -185,13 +186,18 @@ class model:
         plt.close()
 
     # TODO: path to directory and single image?
-    def predict(self, path):
-        # classes_dict = {}
-        # for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
-        #     classes_dict[i] = dir
-        photo = misc.imread(path)
-        photo = transform.resize(photo, (200,200))
-        prediction = self.model.predict(photo[np.newaxis])
-        classes = prediction.argmax(axis=-1)
-        print(f"Prediction for {path} :\n{classes}")
-        # print(f"Class: {classes_dict[np.argmax(prediction)]}")
+    # def predict(self, path):
+    #     # classes_dict = {}
+    #     # for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
+    #     #     classes_dict[i] = dir
+    #     photo = misc.imread(path)
+    #     photo = transform.resize(photo, (200,200))
+    #     prediction = self.model.predict(photo[np.newaxis])
+    #     classes = prediction.argmax(axis=-1)
+    #     print(f"Prediction for {path} :\n{classes}")
+    #     # print(f"Class: {classes_dict[np.argmax(prediction)]}")
+    #     # print(f"Class: {classes_dict[np.argmax(prediction)]}")
+
+    def predict(self):
+        test_steps_per_epoch = np.math.ceil(self.validation_generator.samples / self.validation_generator.batch_size)
+        return self.model.predict_generator(self.validation_generator, steps=test_steps_per_epoch)
