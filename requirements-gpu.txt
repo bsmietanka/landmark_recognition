@@ -27,8 +27,10 @@ pytz==2018.4
 PyWavelets==0.5.2
 PyYAML==3.12
 scikit-image==0.13.1
+scikit-learn==0.19.1
 scipy==1.0.1
 six==1.11.0
+sklearn==0.0
 tensorboard==1.7.0
 tensorflow-gpu==1.7.0
 termcolor==1.1.0
