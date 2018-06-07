@@ -4,6 +4,7 @@ import argparse
 from model import model
 import numpy as np
 from sklearn import metrics
+from os.path import dirname, join
 
 
 def main():
@@ -46,6 +47,8 @@ def main():
         predicted_classes = np.argmax(predictions, axis=1)
         report = metrics.classification_report(true_classes, predicted_classes, target_names=class_labels)
         print(report)
+        with open(join(dirname(args.load), "report.txt"), "w") as text_file:
+            print(f"{report}", file=text_file)
     else:
         my_model.train()
 

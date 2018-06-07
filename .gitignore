@@ -3,6 +3,7 @@
 .idea/
 dataset*/
 validation/
+csv/train.csv
 *.hdf5
-results/
+results*/
 __pycache__/

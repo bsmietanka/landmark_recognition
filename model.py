@@ -80,7 +80,9 @@ class model:
             x = Dense(self.num_classes, name='predictions')(x)
             x = Activation('softmax', name='prob')(x)
 
-            self.model = Model(input=input, output=x)
+            self.model = Model(inputs=input, outputs=x)
+
+            opt = optimizers.Adam(lr=0.0005)
 
         elif self.type == 'VGG16':
             pretrained_conv_model = VGG16(weights='imagenet', include_top=False)
@@ -94,12 +96,15 @@ class model:
 
             x = BatchNormalization(epsilon=eps, axis=3, name='batch_normalization')(output_pretrained_conv)
             x = Activation('relu', name='relu_act')(x)
-            x = GlobalAveragePooling2D()(output_pretrained_conv)
+            x = GlobalAveragePooling2D()(x)
+            # x = GlobalAveragePooling2D()(output_pretrained_conv)
             x = Dense(512, activation='relu', name='fc1')(x)
-            x = Dense(256, activation='relu', name='fc2')(x)
+            x = Dense(512, activation='relu', name='fc2')(x)
             x = Dense(self.num_classes, activation="softmax")(x)
 
-            self.model = Model(input=input, output=x)
+            self.model = Model(inputs=input, outputs=x)
+
+            opt = optimizers.SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
 
         elif self.type == 'VGG-based':
             self.model = Sequential()
@@ -128,10 +133,11 @@ class model:
             self.model.add(Dense(512, activation='relu'))
             self.model.add(Dense(256, activation='relu'))
             self.model.add(Dense(self.num_classes, activation='softmax'))
-        
+
+            opt = optimizers.SGD(lr=0.0001, decay=1e-6, momentum=0.9, nesterov=True)
+
         self.model.summary()
-        sgd = optimizers.SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
-        self.model.compile(optimizer=sgd,
+        self.model.compile(optimizer=opt,
             loss='categorical_crossentropy',
             metrics=['accuracy'])
 
@@ -143,7 +149,7 @@ class model:
         self.model.summary()
 
     def validate(self):
-        return self.model.evaluate_generator(self.validation_generator)
+        return self.model.evaluate_generator(self.validation_generator, verbose=1)
 
     def train(self):
         output_dir = join("results", "{}_{}_{:%Y.%m.%d__%H-%M}".format(self.type, self.num_classes, datetime.now()))
@@ -151,7 +157,7 @@ class model:
             makedirs(output_dir)
 
         checkpoint = ModelCheckpoint(join(output_dir, 'weights.hdf5'), monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=1, verbose=0, mode='auto')
+        stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=2, verbose=0, mode='auto')
         callbacks_list = [checkpoint, stopping]
 
         history = self.model.fit_generator(
@@ -186,19 +192,18 @@ class model:
         plt.savefig(join(output_dir, 'train_history_loss.png'))
         plt.close()
 
-    # TODO: path to directory and single image?
-    # def predict(self, path):
-    #     # classes_dict = {}
-    #     # for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
-    #     #     classes_dict[i] = dir
-    #     photo = misc.imread(path)
-    #     photo = transform.resize(photo, (200,200))
-    #     prediction = self.model.predict(photo[np.newaxis])
-    #     classes = prediction.argmax(axis=-1)
-    #     print(f"Prediction for {path} :\n{classes}")
-    #     # print(f"Class: {classes_dict[np.argmax(prediction)]}")
-    #     # print(f"Class: {classes_dict[np.argmax(prediction)]}")
+    def predict_photo(self, path):
+        # classes_dict = {}
+        # for i, dir in enumerate(listdir(join("dataset_expanded", "train"))):
+        #     classes_dict[i] = dir
+        photo = misc.imread(path)
+        photo = transform.resize(photo, (200,200))
+        prediction = self.model.predict(photo[np.newaxis])
+        classes = prediction.argmax(axis=-1)
+        print(f"Prediction for {path} :\n{classes}")
+        # print(f"Class: {classes_dict[np.argmax(prediction)]}")
+        # print(f"Class: {classes_dict[np.argmax(prediction)]}")
 
     def predict(self):
         test_steps_per_epoch = np.math.ceil(self.validation_generator.samples / self.validation_generator.batch_size)
-        return self.model.predict_generator(self.validation_generator, steps=test_steps_per_epoch, workers=4)
+        return self.model.predict_generator(self.validation_generator, steps=test_steps_per_epoch, verbose=1)
