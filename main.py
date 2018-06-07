@@ -10,7 +10,7 @@ from os.path import dirname, join
 def main():
     parser = argparse.ArgumentParser(description='Deep neural network model for landmark recognition')
     parser.add_argument('dataset_path', metavar='dataset_path', help='path to a dataset directory')
-    # read dataset from csv and download to local directiory?
+    # TODO: read dataset from csv and download to local directiory?
     parser.add_argument('-m', '--model',
                         default="DenseNet121",
                         choices=model.types,

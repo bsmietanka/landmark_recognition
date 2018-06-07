@@ -4,7 +4,6 @@ import os
 import urllib.request
 import datetime
 from multiprocessing.dummy import Pool as ThreadPool
-from remove_lowres_upd_csv import check_images
 from PIL import Image
 from operator import is_not
 from functools import partial

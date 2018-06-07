@@ -13,7 +13,7 @@ def check_images(input_file, output_file, images, minX, maxX, minY, maxY):
     url_data = list()
     with open(images + "/" + input_file, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        for i, row in enumerate(reader):
+        for row in reader:
             photopath = images+"/"+row[2]+"/"+row[0]+".jpg"
             if os.path.isfile(photopath):
                 im = Image.open(photopath)

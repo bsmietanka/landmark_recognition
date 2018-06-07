@@ -55,7 +55,7 @@ def main():
     urlData = list()
     with open(args.source, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        for i, row in enumerate(reader):
+        for row in reader:
             urlData.append(row)
 
     imDownloader = ImageDownloader(args.destination)
